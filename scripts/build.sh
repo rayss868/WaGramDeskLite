@@ -29,19 +29,24 @@ go build -ldflags="-H windowsgui -s -w" -o "$OUT" ./cmd/wagramdesklite
 cp assets/icon.ico icon.ico
 cp assets/icon.ico dist/icon.ico
 
-# Inno Setup command-line compiler.
+# Inno Setup command-line compiler. The installer is optional: the executable
+# is usable on its own, so a missing ISCC warns and skips it rather than failing.
 if command -v iscc >/dev/null 2>&1; then
     ISCC="iscc"
 elif [ -x "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]; then
     ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
 else
-    echo "Inno Setup (ISCC.exe) not found. Install it from https://jrsoftware.org/isdl.php" >&2
-    exit 1
+    ISCC=""
 fi
 
-echo "[3/4] Compiling the installer (dist/WaGramDeskLiteSetup.exe)..."
-# ISCC flags start with '/', which git-bash would rewrite into Windows paths,
-# so disable MSYS argument conversion for this one call.
-MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" "$ISCC" /O"dist" /F"WaGramDeskLiteSetup" scripts/WaGramDeskLiteSetup.iss >/dev/null
-
-echo "[4/4] Done: $OUT and dist/WaGramDeskLiteSetup.exe"
+if [ -n "$ISCC" ]; then
+    echo "[3/4] Compiling the installer (dist/WaGramDeskLiteSetup.exe)..."
+    # ISCC flags start with '/', which git-bash would rewrite into Windows paths,
+    # so disable MSYS argument conversion for this one call.
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" "$ISCC" /O"dist" /F"WaGramDeskLiteSetup" scripts/WaGramDeskLiteSetup.iss >/dev/null
+    echo "[4/4] Done: $OUT and dist/WaGramDeskLiteSetup.exe"
+else
+    echo "[3/4] Skipped the installer: Inno Setup (ISCC.exe) not found." >&2
+    echo "      Install it from https://jrsoftware.org/isdl.php to also build dist/WaGramDeskLiteSetup.exe" >&2
+    echo "[4/4] Done: $OUT (no installer)"
+fi
