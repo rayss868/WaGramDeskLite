@@ -5,6 +5,7 @@ package audio
 import (
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -30,16 +31,65 @@ const (
 	quietScansBeforeSlow = 8
 )
 
-// StartLabeler renames the audio sessions belonging to this process's WebView2
-// renderers to "WhatsApp", so the app's audio appears under that name in the
-// Windows volume mixer.
+var (
+	// volPercent is the level applied to this process's sessions, 0-100.
+	volPercent atomic.Int32
+	// volWake nudges the labeler loop to re-apply the level at once.
+	volWake = make(chan struct{}, 1)
+)
+
+// SetVolume stores a new target level and wakes the labeler so it is applied
+// to the current sessions without waiting for the next scan.
+func SetVolume(percent int) {
+	volPercent.Store(int32(clampPercent(percent)))
+	select {
+	case volWake <- struct{}{}:
+	default:
+	}
+}
+
+func clampPercent(p int) int {
+	if p < 0 {
+		return 0
+	}
+	if p > 100 {
+		return 100
+	}
+	return p
+}
+
+// wait sleeps for d, but returns early if SetVolume pokes volWake.
+func wait(d time.Duration) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+	case <-volWake:
+	}
+}
+
+// applyVolume sets the session's master volume. Errors are ignored: a session
+// that does not expose ISimpleAudioVolume simply keeps its default level.
+func applyVolume(control *wca.IAudioSessionControl2, level float32) {
+	var sav *wca.ISimpleAudioVolume
+	if err := control.PutQueryInterface(wca.IID_ISimpleAudioVolume, &sav); err != nil || sav == nil {
+		return
+	}
+	defer sav.Release()
+	_ = sav.SetMasterVolume(level, nil)
+}
+
+// StartLabeler renames and volumes the audio sessions belonging to this
+// process's WebView2 renderers, so the app's audio appears under label in the
+// Windows volume mixer and plays at the configured level.
 //
 // The scan is deliberately lopsided. It enumerates audio sessions on every
 // tick, but only walks the system process table when a session names a process
 // it has not classified yet. That walk is a snapshot of every process on the
 // machine, and running it every two seconds for the life of the app was the
 // expensive half of the loop this replaced.
-func StartLabeler() {
+func StartLabeler(label string, volumePercent int) {
+	volPercent.Store(int32(clampPercent(volumePercent)))
 	go func() {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
@@ -79,7 +129,7 @@ func StartLabeler() {
 			if manager == nil {
 				enumerator, device, manager = openMixer()
 				if manager == nil {
-					time.Sleep(slowScan)
+					wait(slowScan)
 					continue
 				}
 			}
@@ -88,7 +138,7 @@ func StartLabeler() {
 			if err != nil {
 				// The endpoint went away: device switch or driver restart.
 				releaseMixer()
-				time.Sleep(fastScan)
+				wait(fastScan)
 				continue
 			}
 
@@ -107,22 +157,23 @@ func StartLabeler() {
 			}
 			for _, s := range sessions {
 				if ours[s.pid] {
-					name := "WhatsApp"
+					name := label
 					_ = s.control.SetDisplayName(&name, nil)
+					applyVolume(s.control, float32(volPercent.Load())/100)
 				}
 				s.control.Release()
 			}
 
 			if fresh {
 				quiet = 0
-				time.Sleep(fastScan)
+				wait(fastScan)
 				continue
 			}
 			quiet++
 			if quiet >= quietScansBeforeSlow {
-				time.Sleep(slowScan)
+				wait(slowScan)
 			} else {
-				time.Sleep(fastScan)
+				wait(fastScan)
 			}
 		}
 	}()

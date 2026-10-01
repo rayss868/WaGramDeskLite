@@ -43,6 +43,10 @@ const accountOverlayScript = `
 		'.viewrow { display: flex; align-items: center; gap: 8px; padding: 8px 10px;',
 		'  border-radius: 6px; cursor: pointer; color: #d1d7db; }',
 		'.viewrow:hover { background: #2a3942; }',
+		'.step { padding: 0 6px; border-radius: 4px; background: #2a3942; color: #d1d7db;',
+		'  cursor: pointer; font-weight: 700; }',
+		'.step:hover { background: #3b4a54; }',
+		'.volsteps { margin-left: auto; display: flex; gap: 4px; }',
 		'.msg { padding: 8px 10px; color: #8696a0; line-height: 1.45; }',
 		'input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 6px;',
 		'  border: 1px solid #2a3942; background: #111b21; color: #e9edef;',
@@ -89,6 +93,54 @@ const accountOverlayScript = `
 			if (typeof state.prefs.Lite === 'boolean') { return state.prefs.Lite; }
 		}
 		return true;
+	}
+
+	function privOf() {
+		if (state && state.prefs) {
+			if (typeof state.prefs.privacy === 'boolean') { return state.prefs.privacy; }
+			if (typeof state.prefs.Privacy === 'boolean') { return state.prefs.Privacy; }
+		}
+		return false;
+	}
+
+	function revealOf() {
+		if (state && state.prefs) {
+			var v = state.prefs.privacyReveal || state.prefs.PrivacyReveal;
+			if (v === 'hover' || v === 'click') { return v; }
+		}
+		return 'hard';
+	}
+
+	function currentAccount() {
+		if (!state || !state.accounts) { return null; }
+		for (var i = 0; i < state.accounts.length; i++) {
+			if (state.accounts[i].id === state.current) { return state.accounts[i]; }
+		}
+		return null;
+	}
+
+	function volOf() {
+		var a = currentAccount();
+		return a && typeof a.volume === 'number' ? a.volume : 100;
+	}
+
+	function mutedOf() {
+		var a = currentAccount();
+		return !!(a && a.muted);
+	}
+
+	function stepVolume(delta) {
+		var a = currentAccount();
+		if (!a) { return; }
+		var next = (typeof a.volume === 'number' ? a.volume : 100) + delta;
+		if (next < 0) { next = 0; }
+		if (next > 100) { next = 100; }
+		// Adjusting the level while muted also unmutes, so the change is audible.
+		if (typeof window.wagramVolumeMute === 'function' && a.muted) { window.wagramVolumeMute(false); }
+		if (typeof window.wagramVolumeSet === 'function') { window.wagramVolumeSet(next); }
+		a.volume = next;
+		a.muted = false;
+		render();
 	}
 
 	function mount() {
@@ -210,6 +262,7 @@ const accountOverlayScript = `
 		panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
 		if (mode === 'rename') { renderRename(panel); }
 		else if (mode === 'confirm') { renderConfirm(panel); }
+		else if (mode === 'settings') { renderSettings(panel); }
 		else { renderList(panel); }
 		root.appendChild(panel);
 		anchorPanel(panel);
@@ -264,6 +317,59 @@ const accountOverlayScript = `
 			panel.appendChild(add);
 		});
 
+		var set = el('div', 'act');
+		set.appendChild(el('span', 'gl', '⚙'));
+		set.appendChild(el('span', 'nm', 'Settings'));
+		set.addEventListener('click', function () { mode = 'settings'; render(); });
+		panel.appendChild(set);
+
+		var volRow = el('div', 'viewrow');
+		var volIcon = el('span', 'gl', mutedOf() ? '🔇' : '🔊');
+		volIcon.addEventListener('click', function (ev) {
+			ev.stopPropagation();
+			var on = !mutedOf();
+			if (typeof window.wagramVolumeMute === 'function') { window.wagramVolumeMute(on); }
+			var a = currentAccount();
+			if (a) { a.muted = on; }
+			render();
+		});
+		volRow.appendChild(volIcon);
+		volRow.appendChild(el('span', 'nm', mutedOf() ? 'Volume: Muted' : 'Volume: ' + volOf() + '%'));
+		var steps = el('div', 'volsteps');
+		var minus = el('span', 'step', '−');
+		minus.addEventListener('click', function (ev) { ev.stopPropagation(); stepVolume(-10); });
+		var plus = el('span', 'step', '+');
+		plus.addEventListener('click', function (ev) { ev.stopPropagation(); stepVolume(10); });
+		steps.appendChild(minus);
+		steps.appendChild(plus);
+		volRow.appendChild(steps);
+		panel.appendChild(volRow);
+
+		var ren = el('div', 'act');
+		ren.appendChild(el('span', 'gl', '✎'));
+		ren.appendChild(el('span', 'nm', 'Rename this account'));
+		ren.addEventListener('click', function () { mode = 'rename'; render(); });
+		panel.appendChild(ren);
+
+		// The first account is the app's own profile and cannot be removed.
+		if (state && state.accounts.length && state.current !== state.accounts[0].id) {
+			var del = el('div', 'act danger');
+			del.appendChild(el('span', 'gl', '✕'));
+			del.appendChild(el('span', 'nm', 'Remove this account'));
+			del.addEventListener('click', function () { mode = 'confirm'; render(); });
+			panel.appendChild(del);
+		}
+	}
+
+	function renderSettings(panel) {
+		panel.appendChild(el('div', 'hdr', 'Settings'));
+		var back = el('div', 'act');
+		back.appendChild(el('span', 'gl', '‹'));
+		back.appendChild(el('span', 'nm', 'Back'));
+		back.addEventListener('click', function () { mode = 'list'; render(); });
+		panel.appendChild(back);
+
+		var view = prefsOf();
 		var toggle = el('div', 'viewrow');
 		toggle.appendChild(el('span', 'gl', view === 'pages' ? '▦' : '▤'));
 		toggle.appendChild(el('span', 'nm', view === 'pages' ? 'View: Pages (switch to Tabs)' : 'View: Tabs (switch to Pages)'));
@@ -316,20 +422,46 @@ const accountOverlayScript = `
 		});
 		panel.appendChild(lite);
 
-		var ren = el('div', 'act');
-		ren.appendChild(el('span', 'gl', '✎'));
-		ren.appendChild(el('span', 'nm', 'Rename this account'));
-		ren.addEventListener('click', function () { mode = 'rename'; render(); });
-		panel.appendChild(ren);
+		var privOn = privOf();
+		var priv = el('div', 'viewrow');
+		priv.appendChild(el('span', 'gl', privOn ? '◉' : '○'));
+		priv.appendChild(el('span', 'nm', privOn ? 'Privacy: On (blur messages)' : 'Privacy: Off (blur messages)'));
+		priv.addEventListener('click', function () {
+			var next = !privOn;
+			if (typeof window.wagramPrivacyApply === 'function') { window.wagramPrivacyApply(next, revealOf()); }
+			if (typeof window.wagramPrivacySet === 'function') {
+				window.wagramPrivacySet(next).then(function () { setTimeout(refresh, 80); });
+			}
+			if (state && state.prefs) {
+				if ('privacy' in state.prefs) { state.prefs.privacy = next; }
+				state.prefs.Privacy = next;
+			}
+			privOn = next;
+			render();
+		});
+		panel.appendChild(priv);
 
-		// The first account is the app's own profile and cannot be removed.
-		if (state && state.accounts.length && state.current !== state.accounts[0].id) {
-			var del = el('div', 'act danger');
-			del.appendChild(el('span', 'gl', '✕'));
-			del.appendChild(el('span', 'nm', 'Remove this account'));
-			del.addEventListener('click', function () { mode = 'confirm'; render(); });
-			panel.appendChild(del);
-		}
+		var curReveal = revealOf();
+		var reveal = el('div', 'viewrow');
+		reveal.appendChild(el('span', 'gl', curReveal === 'hard' ? '▤' : curReveal === 'hover' ? '▦' : '▣'));
+		reveal.appendChild(el('span', 'nm',
+			curReveal === 'hard' ? 'Reveal: Hard (no peek)'
+			: curReveal === 'hover' ? 'Reveal: Hover (peek on hover)'
+			: 'Reveal: Click (click to peek)'));
+		reveal.addEventListener('click', function () {
+			var now = revealOf();
+			var next = now === 'hard' ? 'hover' : now === 'hover' ? 'click' : 'hard';
+			if (typeof window.wagramPrivacyApply === 'function') { window.wagramPrivacyApply(privOf(), next); }
+			if (typeof window.wagramPrivacyRevealSet === 'function') {
+				window.wagramPrivacyRevealSet(next).then(function () { setTimeout(refresh, 80); });
+			}
+			if (state && state.prefs) {
+				if ('privacyReveal' in state.prefs) { state.prefs.privacyReveal = next; }
+				state.prefs.PrivacyReveal = next;
+			}
+			render();
+		});
+		panel.appendChild(reveal);
 	}
 
 	function renderRename(panel) {

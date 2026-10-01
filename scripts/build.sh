@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build WaGramDeskLite: compile Windows resources, build the executable into dist/.
+# Build WaGramDeskLite: compile Windows resources, build the executable and the
+# Inno Setup installer into dist/.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,17 +16,32 @@ else
 fi
 OUT="dist/WaGramDeskLite.exe"
 
-echo "[1/3] Compiling Windows resources (icon, manifest, VERSIONINFO)..."
+echo "[1/4] Compiling Windows resources (icon, manifest, VERSIONINFO)..."
 cd build
 "$RESTOOL" make -arch amd64 --in winres.json
 cp rsrc_windows_amd64.syso ../cmd/wagramdesklite/rsrc.syso
 cd ..
 
-echo "[2/3] Building $OUT..."
+echo "[2/4] Building $OUT..."
 mkdir -p dist
 go build -ldflags="-H windowsgui -s -w" -o "$OUT" ./cmd/wagramdesklite
 # The tray icon is loaded at runtime from icon.ico next to the executable.
 cp assets/icon.ico icon.ico
 cp assets/icon.ico dist/icon.ico
 
-echo "[3/3] Done: $OUT"
+# Inno Setup command-line compiler.
+if command -v iscc >/dev/null 2>&1; then
+    ISCC="iscc"
+elif [ -x "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]; then
+    ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+else
+    echo "Inno Setup (ISCC.exe) not found. Install it from https://jrsoftware.org/isdl.php" >&2
+    exit 1
+fi
+
+echo "[3/4] Compiling the installer (dist/WaGramDeskLiteSetup.exe)..."
+# ISCC flags start with '/', which git-bash would rewrite into Windows paths,
+# so disable MSYS argument conversion for this one call.
+MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" "$ISCC" /O"dist" /F"WaGramDeskLiteSetup" scripts/WaGramDeskLiteSetup.iss >/dev/null
+
+echo "[4/4] Done: $OUT and dist/WaGramDeskLiteSetup.exe"

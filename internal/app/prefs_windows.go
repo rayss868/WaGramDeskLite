@@ -29,6 +29,15 @@ type prefs struct {
 	// left untouched. Nil means on (default), same as Notifications, so files
 	// written before the setting existed keep the original behaviour.
 	Lite *bool `json:"lite,omitempty"`
+	// Privacy blurs message bubbles, contact names, avatars, and chat previews
+	// inside the page. Nil means off (unlike Notifications/Lite): a fresh
+	// install that blurred everything would look broken.
+	Privacy *bool `json:"privacy,omitempty"`
+	// PrivacyReveal picks how a blurred element can be peeked at: "hard" (the
+	// default; nothing peeks), "hover" (the element sharpens under the mouse),
+	// or "click" (a click toggles it sharp). Anything else normalizes to
+	// "hard".
+	PrivacyReveal string `json:"privacyReveal,omitempty"`
 }
 
 func prefsPath() string {
@@ -57,6 +66,46 @@ func setLiteEnabled(p *prefs, on bool) {
 	p.Lite = &v
 }
 
+// Reveal mode values. Hard is the default and the only one safe to leave on
+// while screen sharing.
+const (
+	RevealHard  = "hard"
+	RevealHover = "hover"
+	RevealClick = "click"
+)
+
+func privacyEnabled(p prefs) bool {
+	return p.Privacy != nil && *p.Privacy
+}
+
+func setPrivacyEnabled(p *prefs, on bool) {
+	v := on
+	p.Privacy = &v
+}
+
+// privacyReveal returns one of the three modes, never an unknown value.
+func privacyReveal(p prefs) string {
+	switch p.PrivacyReveal {
+	case RevealHover:
+		return RevealHover
+	case RevealClick:
+		return RevealClick
+	default:
+		return RevealHard
+	}
+}
+
+func setPrivacyReveal(p *prefs, mode string) {
+	switch mode {
+	case RevealHover:
+		p.PrivacyReveal = RevealHover
+	case RevealClick:
+		p.PrivacyReveal = RevealClick
+	default:
+		p.PrivacyReveal = RevealHard
+	}
+}
+
 func loadPrefs() prefs {
 	def := defaultPrefs()
 	data, err := os.ReadFile(prefsPath())
@@ -70,6 +119,10 @@ func loadPrefs() prefs {
 	}
 	if p.ViewMode != ViewTabs && p.ViewMode != ViewPages {
 		p.ViewMode = def.ViewMode
+	}
+	if p.PrivacyReveal != "" && p.PrivacyReveal != RevealHard &&
+		p.PrivacyReveal != RevealHover && p.PrivacyReveal != RevealClick {
+		p.PrivacyReveal = RevealHard
 	}
 	return p
 }

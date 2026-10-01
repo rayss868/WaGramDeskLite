@@ -4,6 +4,9 @@ dist/
 build/rsrc_windows_amd64.syso
 build/extract_test/
 
+# Copied next to the exe by scripts/build.sh; assets/icon.ico is the source.
+/icon.ico
+
 # Inno Setup installer
 WaGramDeskLiteSetup.exe
 

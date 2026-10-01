@@ -19,6 +19,12 @@ type account struct {
 	// Service is whatsapp (default) or telegram. Empty means whatsapp
 	// for accounts written before multi-service support.
 	Service Service `json:"service,omitempty"`
+	// Volume is this account's playback level, 0-100. Nil means 100, so
+	// accounts written before this setting existed play at full volume.
+	Volume *int `json:"volume,omitempty"`
+	// Muted silences the account without losing its level. Effective volume
+	// is 0 while muted, and the stored Volume is restored on unmute.
+	Muted bool `json:"muted,omitempty"`
 }
 
 func accountFor(id string) account {
@@ -29,6 +35,42 @@ func accountFor(id string) account {
 		}
 	}
 	return account{ID: id, Name: "Account", Service: ServiceWhatsApp}
+}
+
+// accountVolume returns this account's playback level, 0-100, defaulting to
+// 100 for accounts written before the setting existed.
+func accountVolume(a account) int {
+	if a.Volume == nil {
+		return 100
+	}
+	return clampVolume(*a.Volume)
+}
+
+func setAccountVolume(p *account, v int) {
+	c := clampVolume(v)
+	p.Volume = &c
+}
+
+func accountMuted(a account) bool { return a.Muted }
+
+func setAccountMuted(p *account, on bool) { p.Muted = on }
+
+// effectiveVolume is the level actually applied: silent while muted.
+func effectiveVolume(a account) int {
+	if a.Muted {
+		return 0
+	}
+	return accountVolume(a)
+}
+
+func clampVolume(v int) int {
+	if v < 0 {
+		return 0
+	}
+	if v > 100 {
+		return 100
+	}
+	return v
 }
 
 func setAutostart(id string, on bool) {
