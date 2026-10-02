@@ -4,14 +4,14 @@
 [Setup]
 AppId={{8F6A9E2C-4B1E-4F3A-9C6D-WaGramDeskLite}
 AppName=WaGramDeskLite
-AppVersion=1.2.1
+AppVersion=1.2.2
 ; AppVersion only fills the display version. The Setup.exe's own resource comes
 ; from these; without them Explorer reports FileVersion 0.0.0.0 on the installer.
-VersionInfoVersion=1.2.1.0
-VersionInfoTextVersion=1.2.1
+VersionInfoVersion=1.2.2.0
+VersionInfoTextVersion=1.2.2
 VersionInfoProductName=WaGram Desk Lite
-VersionInfoProductVersion=1.2.1.0
-VersionInfoProductTextVersion=1.2.1
+VersionInfoProductVersion=1.2.2.0
+VersionInfoProductTextVersion=1.2.2
 AppPublisher=WaGramDeskLite
 AppContact=https://github.com/rayss868/WaGramDeskLite
 DefaultDirName={localappdata}\Programs\WaGramDeskLite
