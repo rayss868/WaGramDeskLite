@@ -263,6 +263,10 @@ const accountOverlayScript = `
 		if (mode === 'rename') { renderRename(panel); }
 		else if (mode === 'confirm') { renderConfirm(panel); }
 		else if (mode === 'settings') { renderSettings(panel); }
+		else if (mode === 'export') { renderExport(panel); }
+		else if (mode === 'quickreplies') { renderQuickReplies(panel); }
+		else if (mode === 'scheduler') { renderScheduler(panel); }
+		else if (mode === 'webhooks') { renderWebhooks(panel); }
 		else { renderList(panel); }
 		root.appendChild(panel);
 		anchorPanel(panel);
@@ -462,6 +466,183 @@ const accountOverlayScript = `
 			render();
 		});
 		panel.appendChild(reveal);
+
+		panel.appendChild(el('div', 'hdr', 'Tools'));
+		var tools = [
+			['⬇', 'Export chat', 'export'],
+			['⚡', 'Quick replies', 'quickreplies'],
+			['⏱', 'Scheduled messages', 'scheduler'],
+			['🔗', 'Webhooks', 'webhooks']
+		];
+		tools.forEach(function (t) {
+			var row = el('div', 'viewrow');
+			row.appendChild(el('span', 'gl', t[0]));
+			row.appendChild(el('span', 'nm', t[1]));
+			row.addEventListener('click', function () { mode = t[2]; render(); });
+			panel.appendChild(row);
+		});
+	}
+
+	function subBack(panel, label) {
+		panel.appendChild(el('div', 'hdr', label));
+		var back = el('div', 'act');
+		back.appendChild(el('span', 'gl', '‹'));
+		back.appendChild(el('span', 'nm', 'Back'));
+		back.addEventListener('click', function () { mode = 'settings'; render(); });
+		panel.appendChild(back);
+	}
+
+	function renderExport(panel) {
+		subBack(panel, 'Export chat');
+		var result = el('div', 'msg', 'Choose a format. The open conversation is saved to the exports folder.');
+		panel.appendChild(result);
+		var btns = el('div', 'btns');
+		['TXT', 'JSON', 'HTML'].forEach(function (fmt) {
+			var b = el('button', '', fmt);
+			b.addEventListener('click', function () {
+				if (typeof window.wagramAgent === 'undefined' || !window.wagramAgent.readMessages) {
+					result.textContent = 'Open a chat first.';
+					return;
+				}
+				window.wagramAgent.readMessages(500).then(function (data) {
+					return window.wagramExportWrite(fmt.toLowerCase(), data);
+				}).then(function (path) {
+					if (path.indexOf('error:') === 0) {
+						result.textContent = path;
+						return;
+					}
+					var name = path.split(/[\\/]/).pop();
+					result.textContent = 'Exported: ' + name;
+					if (typeof window.wagramExportReveal === 'function') {
+						window.wagramExportReveal(path);
+					}
+				});
+			});
+			btns.appendChild(b);
+		});
+		panel.appendChild(btns);
+	}
+
+	function renderQuickReplies(panel) {
+		subBack(panel, 'Quick replies');
+		var listBox = el('div', '');
+		panel.appendChild(listBox);
+		var show = function (list) {
+			listBox.textContent = '';
+			if (!list || !list.length) { listBox.appendChild(el('div', 'msg', 'No shortcuts yet.')); return; }
+			list.forEach(function (q) {
+				var row = el('div', 'viewrow');
+				row.appendChild(el('span', 'gl', '⚡'));
+				row.appendChild(el('span', 'nm', q.token + ' → ' + q.text));
+				var del = el('button', '', '×');
+				del.addEventListener('click', function (ev) {
+					ev.stopPropagation();
+					window.wagramQuickReplyDelete(q.token).then(show);
+				});
+				row.appendChild(del);
+				listBox.appendChild(row);
+			});
+		};
+		var token = document.createElement('input');
+		token.placeholder = '/token';
+		panel.appendChild(token);
+		var text = document.createElement('input');
+		text.placeholder = 'Expansion text';
+		panel.appendChild(text);
+		var btns = el('div', 'btns');
+		var add = el('button', 'go', 'Add');
+		add.addEventListener('click', function () {
+			window.wagramQuickReplySave(token.value, text.value).then(function (list) {
+				token.value = ''; text.value = '';
+				show(list);
+			});
+		});
+		btns.appendChild(add);
+		panel.appendChild(btns);
+		if (typeof window.wagramQuickRepliesState === 'function') {
+			window.wagramQuickRepliesState().then(show);
+		}
+	}
+
+	function renderWebhooks(panel) {
+		subBack(panel, 'Webhooks');
+		var listBox = el('div', '');
+		panel.appendChild(listBox);
+		var show = function (list) {
+			listBox.textContent = '';
+			if (!list || !list.length) { listBox.appendChild(el('div', 'msg', 'No webhooks yet. Incoming messages are POSTed to these URLs.')); return; }
+			list.forEach(function (url) {
+				var row = el('div', 'viewrow');
+				row.appendChild(el('span', 'gl', '🔗'));
+				row.appendChild(el('span', 'nm', url));
+				var del = el('button', '', '×');
+				del.addEventListener('click', function (ev) {
+					ev.stopPropagation();
+					window.wagramWebhookDelete(url).then(show);
+				});
+				row.appendChild(del);
+				listBox.appendChild(row);
+			});
+		};
+		var input = document.createElement('input');
+		input.placeholder = 'https://example.com/hook';
+		panel.appendChild(input);
+		var btns = el('div', 'btns');
+		var add = el('button', 'go', 'Add');
+		add.addEventListener('click', function () {
+			window.wagramWebhookAdd(input.value.trim()).then(function (list) {
+				input.value = '';
+				show(list);
+			});
+		});
+		btns.appendChild(add);
+		panel.appendChild(btns);
+		if (typeof window.wagramWebhooksState === 'function') {
+			window.wagramWebhooksState().then(show);
+		}
+	}
+
+	function renderScheduler(panel) {
+		subBack(panel, 'Scheduled messages');
+		var listBox = el('div', '');
+		panel.appendChild(listBox);
+		var show = function (list) {
+			listBox.textContent = '';
+			if (!list || !list.length) { listBox.appendChild(el('div', 'msg', 'Nothing scheduled.')); return; }
+			list.forEach(function (m) {
+				var row = el('div', 'viewrow');
+				row.appendChild(el('span', 'gl', '⏱'));
+				row.appendChild(el('span', 'nm', new Date(m.sendAt * 1000).toLocaleString() + ' — ' + m.text));
+				var del = el('button', '', '×');
+				del.addEventListener('click', function (ev) {
+					ev.stopPropagation();
+					window.wagramScheduleDelete(m.id).then(show);
+				});
+				row.appendChild(del);
+				listBox.appendChild(row);
+			});
+		};
+		var text = document.createElement('input');
+		text.placeholder = 'Message to send to the open chat';
+		panel.appendChild(text);
+		var when = document.createElement('input');
+		when.type = 'datetime-local';
+		panel.appendChild(when);
+		var btns = el('div', 'btns');
+		var add = el('button', 'go', 'Schedule');
+		add.addEventListener('click', function () {
+			var ts = Math.floor(Date.parse(when.value) / 1000);
+			if (!text.value || isNaN(ts)) { return; }
+			window.wagramScheduleAdd(text.value, ts).then(function (list) {
+				text.value = ''; when.value = '';
+				show(list);
+			});
+		});
+		btns.appendChild(add);
+		panel.appendChild(btns);
+		if (typeof window.wagramScheduleState === 'function') {
+			window.wagramScheduleState().then(show);
+		}
 	}
 
 	function renderRename(panel) {

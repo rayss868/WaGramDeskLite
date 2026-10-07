@@ -21,7 +21,8 @@ PY
 fail=0
 for pair in "internal/app/notification_windows.go:notificationPolyfillJS" \
             "internal/app/overlay_windows.go:accountOverlayScript" \
-            "internal/app/privacy_windows.go:privacyBlurScriptTemplate"; do
+            "internal/app/privacy_windows.go:privacyBlurScriptTemplate" \
+            "internal/app/agent_windows.go:agentScript"; do
   f="${pair%%:*}"; c="${pair##*:}"
   out="/tmp/$c.js"
   extract "$f" "$c" > "$out" || { echo "extract failed: $c"; fail=1; continue; }

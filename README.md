@@ -69,6 +69,15 @@ The tray menu carries the same account list as a shortcut, so you can switch wit
 
 > Each account runs its own WebView2 instance, so memory use grows roughly in step with the number of accounts you keep open.
 
+## MCP / AI Agent Access
+
+Each running window also exposes a **Model Context Protocol (MCP)** server on a
+loopback HTTP port, so an AI agent can list chats, read the open conversation,
+and send a message through the same UI. The endpoint URL and a persistent bearer
+token are written to `%APPDATA%\WaGramDeskLite\mcp.json`. See
+[docs/MCP.md](docs/MCP.md) for the token model, the tool list, and how to connect
+a client.
+
 ## Session & Data
 
 All profile data (cookies, localStorage, IndexedDB) is stored locally:
@@ -127,6 +136,8 @@ WaGramDeskLite/
 ├── build/                 # winres.json, winres/ data, app.manifest (resources source)
 ├── scripts/
 │   └── build.sh           # One-shot resource + executable build
+├── docs/
+│   └── MCP.md             # MCP endpoint, token model, agent setup
 ├── dist/                  # Build output (WaGramDeskLite.exe)
 ├── go.mod / go.sum        # Go module definition
 └── vendor/                # Vendored dependencies

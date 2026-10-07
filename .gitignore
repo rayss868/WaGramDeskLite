@@ -17,3 +17,6 @@ WaGramDeskLiteSetup.exe
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# superpowers SDD working artifacts — local only, not committed.
+/.superpowers/
