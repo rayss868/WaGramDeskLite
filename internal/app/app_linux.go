@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"wagramdesklite/internal/paste"
 	"wagramdesklite/internal/webview"
 )
 
@@ -151,6 +152,7 @@ func Run() int {
 	}()
 	w.SetTitle(gWindowTitle)
 	w.Init(`Object.defineProperty(navigator,'userAgent',{get:()=>` + fmt.Sprintf("%q", userAgent) + `});`)
+	w.Init(paste.Script)
 	w.Init(accountOverlayScript)
 	w.Init(privacyScript(loadPrefs()))
 	w.Init(agentScript)

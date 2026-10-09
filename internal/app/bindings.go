@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"wagramdesklite/internal/paste"
 	"wagramdesklite/internal/webview"
 )
 
@@ -20,6 +21,9 @@ type accountsView struct {
 
 // registerBindings exposes the host functions the injected scripts call.
 func registerBindings(w webview.WebView, hwnd uintptr) {
+	// WebKitGTK drops image payloads from paste events; the shim in
+	// internal/paste reads them back from the OS clipboard through this.
+	_ = w.Bind("wagramReadClipboardImage", paste.ReadImage)
 	_ = w.Bind("sendNativeNotification", func(title, body, iconDataURL string) {
 		if !notificationsEnabled(loadPrefs()) {
 			return
