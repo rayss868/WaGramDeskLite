@@ -5,6 +5,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Target selalu Windows regardless of host OS: di Windows ini no-op (native),
+# di Linux/macOS wajib agar go build menghasilkan objek PE — tanpa ini
+# "-H windowsgui" memaksa jalur link PE di atas objek ELF dan linker Go
+# panic (peSection nil pointer di emitRelocations).
+export GOOS=windows GOARCH=amd64
+
 # github.com/tc-hib/go-winres (pure Go resource compiler, no windres needed)
 if command -v go-winres >/dev/null 2>&1; then
     RESTOOL="go-winres"
