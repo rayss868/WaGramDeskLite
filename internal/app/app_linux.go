@@ -107,6 +107,14 @@ func trayBalloon(title, message string, _ []byte) {
 		_ = exec.Command("notify-send", title, message).Start()
 	}
 }
+
+// warnIfClipboardToolMissing raises a tray balloon once at startup when the
+// paste bridge has no clipboard helper, so the failure is not silent.
+func warnIfClipboardToolMissing() {
+	if msg := paste.WarningText(); msg != "" {
+		trayBalloon("WaGram Desk Lite", msg, nil)
+	}
+}
 func decodeDataURL(string) []byte { return nil }
 func openLastNotificationChat() {
 	if gWebView != nil {
@@ -156,11 +164,15 @@ func Run() int {
 	w.Init(accountOverlayScript)
 	w.Init(privacyScript(loadPrefs()))
 	w.Init(agentScript)
+	if warn := paste.WarningScript(); warn != "" {
+		w.Init(warn)
+	}
 	registerBindings(w, 0)
 	startMCPServer(w)
 	startScheduler(w)
 	startWebhookWatcher(w)
 	w.Navigate(serviceURL(acct.Service))
+	go warnIfClipboardToolMissing()
 	w.Run()
 	return 0
 }

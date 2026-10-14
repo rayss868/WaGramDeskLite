@@ -19,3 +19,12 @@ const Script = ""
 func ReadImage() string {
 	return ""
 }
+
+// ClipboardTool reports the clipboard helper ReadImage would use. Windows
+// needs none, so it reports "" like the Linux build does when no helper is
+// installed; callers gate the "install xclip/wl-clipboard" warning on Linux.
+func ClipboardTool() string { return "" }
+
+// InstallHint names the package that provides a clipboard helper. Windows
+// needs none.
+func InstallHint() string { return "" }
