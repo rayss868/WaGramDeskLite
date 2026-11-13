@@ -63,7 +63,7 @@ Open the account switcher from the round button in WhatsApp's left sidebar, just
 - **Rename** the account you are in
 - **Remove** the account you are in, deleting its stored session
 
-Every account runs as its own process with its own storage profile, so all of them stay connected and notify you independently — you never miss a message because an account was not on screen. Accounts left open when you quit are reopened next time; choosing **Exit** from an account's tray menu keeps that one closed.
+Every account runs as its own process with its own storage profile, so opened accounts stay connected and notify you independently — you never miss a message because an account was not on screen. A normal launch opens only the most recently closed account, falling back to the default account when needed. Open other accounts from the switcher or tray menu when you need them; accounts already running are left alone.
 
 The tray menu carries the same account list as a shortcut, so you can switch without opening a window first.
 
