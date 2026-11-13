@@ -39,6 +39,7 @@ var (
 	procDestroyMenu      = user32.NewProc("DestroyMenu")
 	procGetCursorPos     = user32.NewProc("GetCursorPos")
 	procShellNotifyIcon  = shell32.NewProc("Shell_NotifyIconW")
+	procShellExecuteW   = shell32.NewProc("ShellExecuteW")
 	procSetTimer         = user32.NewProc("SetTimer")
 	procIsWindowVisible  = user32.NewProc("IsWindowVisible")
 	procPostMessageW     = user32.NewProc("PostMessageW")
