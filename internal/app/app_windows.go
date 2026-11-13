@@ -118,7 +118,7 @@ func Run() int {
 	setAutostart(gProfileID, true)
 
 	if !webView2RuntimeInstalled() {
-		showErrorDialog("WebView2 Runtime tidak ditemukan.\n\nSilakan install Microsoft Edge WebView2 Runtime dari:\nhttps://developer.microsoft.com/microsoft-edge/webview2/")
+		showErrorDialog("WebView2 Runtime not found.\n\nPlease install Microsoft Edge WebView2 Runtime from:\nhttps://developer.microsoft.com/microsoft-edge/webview2/")
 		return 1
 	}
 
@@ -157,7 +157,7 @@ func Run() int {
 
 	w := webview2.NewWithOptions(opts)
 	if w == nil {
-		showErrorDialog("Gagal menginisialisasi WebView2. Pastikan Microsoft Edge WebView2 Runtime terinstall.")
+		showErrorDialog("Failed to initialize WebView2. Make sure Microsoft Edge WebView2 Runtime is installed.")
 		return 1
 	}
 	// Registered before w.Destroy so it runs after it, once WebView2 has let go
