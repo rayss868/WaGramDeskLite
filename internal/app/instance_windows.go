@@ -31,8 +31,7 @@ func validProfileID(id string) bool {
 }
 
 // profileFromArgs reports which account this process was launched for, and
-// whether it was named explicitly. Only the implicit launch restores the rest
-// of the previous session.
+// whether it was named explicitly. A plain launch uses the remembered account.
 func profileFromArgs() (string, bool) {
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
@@ -49,6 +48,13 @@ func profileFromArgs() (string, bool) {
 			return id, true
 		}
 		return defaultProfileID, false
+	}
+	if id := loadPrefs().ActiveID; validProfileID(id) {
+		for _, a := range loadAccounts() {
+			if a.ID == id {
+				return id, false
+			}
+		}
 	}
 	return defaultProfileID, false
 }
@@ -166,6 +172,7 @@ func applyAccountName(hwnd uintptr, a account) {
 }
 
 func quitInstance(hwnd uintptr) {
+	rememberAccount(gProfileID)
 	saveWindowBounds(hwnd)
 	trayDelete()
 	procPostQuitMessage.Call(0)

@@ -104,7 +104,7 @@ func showErrorDialog(message string) {
 // Run starts the WaGramDeskLite window and blocks until the app exits.
 // It returns the process exit code.
 func Run() int {
-	profileID, explicit := profileFromArgs()
+	profileID, _ := profileFromArgs()
 	acct := ensureAccount(profileID)
 	gProfileID = profileID
 	gAccountName = acct.Name
@@ -176,16 +176,6 @@ func Run() int {
 	enableContextMenu(w)
 	initNotificationPermission(w)
 	audio.StartLabeler(serviceLabel(acct.Service)+" - "+acct.Name, effectiveVolume(acct))
-
-	// Only an implicit launch reopens the accounts from the previous session;
-	// an explicit --profile starts exactly the one account it names.
-	if !explicit {
-		for _, a := range loadAccounts() {
-			if a.ID != gProfileID && a.Autostart {
-				spawnAccount(a.ID)
-			}
-		}
-	}
 
 	hwnd := uintptr(w.Window())
 	setDarkWindowFrame(hwnd)
