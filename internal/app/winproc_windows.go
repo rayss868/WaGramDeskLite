@@ -62,7 +62,7 @@ func windowProc(hwnd, msg, wp, lp uintptr) uintptr {
 		saveWindowBounds(hwnd)
 		procShowWindow.Call(hwnd, swHide)
 		enterLowMemory()
-		go trayBalloon("WaGram Desk Lite", "Masih berjalan di system tray. Klik ikon untuk membuka kembali.", nil)
+		go trayBalloon("WaGram Desk Lite", "Still running in the system tray. Click the icon to reopen.", nil)
 		return 0
 	case wmShowWindow:
 		if wp != 0 {
