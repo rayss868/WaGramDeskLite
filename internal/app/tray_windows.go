@@ -54,6 +54,14 @@ func loadTrayIcon(iconPath string, size uintptr) uintptr {
 	if hIcon != 0 {
 		return hIcon
 	}
+	// Portable builds carry the same icon as the window in resource 2.
+	var module windows.Handle
+	if windows.GetModuleHandleEx(windows.GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, nil, &module) == nil {
+		hIcon, _, _ = procLoadImageW.Call(uintptr(module), 2, imageIcon, size, size, 0)
+		if hIcon != 0 {
+			return hIcon
+		}
+	}
 	hIcon, _, _ = procLoadIconW.Call(0, idiApplication)
 	return hIcon
 }
