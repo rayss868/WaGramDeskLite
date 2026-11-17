@@ -59,6 +59,7 @@ func windowProc(hwnd, msg, wp, lp uintptr) uintptr {
 	switch msg {
 	case wmClose:
 		// Close-to-tray: hide the window and keep running in the background.
+		rememberAccount(gProfileID)
 		saveWindowBounds(hwnd)
 		procShowWindow.Call(hwnd, swHide)
 		enterLowMemory()

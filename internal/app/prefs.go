@@ -48,6 +48,12 @@ func defaultPrefs() prefs {
 	return prefs{ViewMode: ViewTabs}
 }
 
+func rememberAccount(id string) {
+	p := loadPrefs()
+	p.ActiveID = id
+	savePrefs(p)
+}
+
 func notificationsEnabled(p prefs) bool {
 	return p.Notifications == nil || *p.Notifications
 }

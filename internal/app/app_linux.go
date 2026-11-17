@@ -48,6 +48,13 @@ func profileFromArgs() (string, bool) {
 		}
 		return defaultProfileID, false
 	}
+	if id := loadPrefs().ActiveID; validProfileID(id) {
+		for _, a := range loadAccounts() {
+			if a.ID == id {
+				return id, false
+			}
+		}
+	}
 	return defaultProfileID, false
 }
 func validProfileID(id string) bool {
@@ -129,7 +136,7 @@ func startIdleTimer(uintptr)                     {}
 func setDarkWindowFrame(uintptr)                 {}
 func checkWebKitGTK() error                      { return nil }
 func Run() int {
-	profileID, explicit := profileFromArgs()
+	profileID, _ := profileFromArgs()
 	acct := ensureAccount(profileID)
 	gProfileID, gAccountName = profileID, acct.Name
 	gServiceBadge, gWindowTitle = serviceBadge(acct.Service), windowTitleFor(acct)
@@ -137,14 +144,8 @@ func Run() int {
 	if !single {
 		return 0
 	}
+	defer rememberAccount(gProfileID)
 	setAutostart(gProfileID, true)
-	if !explicit {
-		for _, a := range loadAccounts() {
-			if a.ID != gProfileID && a.Autostart {
-				spawnAccount(a.ID)
-			}
-		}
-	}
 	w := webview.New(false)
 	if w == nil {
 		fmt.Fprintln(os.Stderr, "Failed to initialize WebKitGTK WebView")
